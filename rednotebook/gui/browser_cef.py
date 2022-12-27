@@ -25,22 +25,32 @@ from gi.repository import Gdk, GObject, Gtk
 from rednotebook.util import filesystem
 
 
-try:
-    from cefpython3 import cefpython as cef
-except ImportError as err:
-    cef = None
-    if filesystem.IS_WIN:
+_cls = None
+
+
+def get_html_view_class():
+    cef_disabled = True
+    if cef_disabled:
+        return None
+    global _cls
+    if not filesystem.IS_WIN:
+        return None
+    if not _cls:
+        _cls = _make_html_view_class()
+    return _cls
+
+
+def _make_html_view_class():
+    try:
+        from cefpython3 import cefpython as cef
+    except ImportError as err:
         logging.info(
             "CEF Python not found. Disabling clouds and"
             ' in-app previews. Error message: "{}"'.format(err)
         )
-
-
-if cef:
+        return None
 
     class HtmlView(Gtk.DrawingArea):
-        NOTEBOOK_URL = "file:///"
-
         """
         Loading HTML strings only works if we pass the `url` parameter to
         CreateBrowserSync.
@@ -51,6 +61,8 @@ if cef:
 
         """
 
+        NOTEBOOK_URL = "file:///"
+
         def __init__(self):
             super().__init__()
             self._browser = None
@@ -58,7 +70,13 @@ if cef:
             self._initial_html = ""
 
             sys.excepthook = cef.ExceptHook  # To shutdown CEF processes on error.
-            cef.Initialize(settings={"context_menu": {"enabled": False}})
+            settings = {
+                "context_menu": {"enabled": False},
+                # "debug": True,
+                # "log_severity": cef.LOGSEVERITY_INFO,
+                # "log_file": "debug.log",
+            }
+            cef.Initialize(settings=settings)
 
             GObject.threads_init()
             GObject.timeout_add(10, self.on_timer)
@@ -84,8 +102,8 @@ if cef:
             gpointer = ctypes.pythonapi.PyCapsule_GetPointer(
                 self.get_property("window").__gpointer__, None
             )
-            # The GTK 3.22 stack needs "gdk-3-3.0.dll".
-            libgdk = ctypes.CDLL("libgdk-3-0.dll")
+            libgdk = ctypes.CDLL("gdk-3-vs17.dll")
+            libgdk.gdk_win32_window_get_handle.argtypes = [ctypes.c_void_p]
             handle = libgdk.gdk_win32_window_get_handle(gpointer)
             Gdk.threads_leave()
             return handle
@@ -149,3 +167,5 @@ if cef:
                 # code. All references must be cleared for CEF to shutdown cleanly.
                 self._browser = None
             cef.Shutdown()
+
+    return HtmlView

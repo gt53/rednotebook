@@ -25,6 +25,7 @@ import urllib.parse
 
 from gi.repository import Gdk, GdkPixbuf, GObject, Gtk, GtkSource, Pango
 
+from rednotebook.gui.options import OptionsManager
 from rednotebook import info, templates
 from rednotebook.gui import (
     browser,
@@ -39,7 +40,6 @@ from rednotebook.gui import (
 from rednotebook.gui.customwidgets import CustomComboBoxEntry, CustomListView
 from rednotebook.gui.exports import ExportAssistant
 from rednotebook.gui.menu import MainMenuBar
-from rednotebook.gui.options import OptionsManager
 from rednotebook.util import dates, filesystem, markup, urls, utils
 
 
@@ -50,7 +50,6 @@ class MainWindow:
     """
 
     def __init__(self, journal):
-
         self.journal = journal
 
         # Load Glade file.
@@ -73,8 +72,8 @@ class MainWindow:
             self.builder.set_translation_domain("rednotebook")
             self.builder.add_from_file(self.gladefile)
 
-        # Get the main window and set the icon
         self.main_frame = self.builder.get_object("main_frame")
+        self.main_frame.set_application(journal)
         self.main_frame.set_title("RedNotebook")
         icon = GdkPixbuf.Pixbuf.new_from_file(
             os.path.join(filesystem.frame_icon_dir, "rn-128.png")
@@ -156,9 +155,10 @@ class MainWindow:
             self.html_editor.connect("decide-policy", self.on_browser_decide_policy)
             self.text_vbox.pack_start(self.html_editor, True, True, 0)
             self.html_editor.set_editable(False)
-        elif use_internal_preview and browser_cef.cef:
+        elif use_internal_preview and browser_cef.get_html_view_class():
+            HtmlView = browser_cef.get_html_view_class()
 
-            class Preview(browser_cef.HtmlView):
+            class Preview(HtmlView):
                 def __init__(self, journal):
                     super().__init__()
                     self.journal = journal
@@ -330,13 +330,13 @@ class MainWindow:
             [
                 (
                     "Show",
-                    Gtk.STOCK_MEDIA_PLAY,
+                    None,
                     _("Show RedNotebook"),
                     None,
                     None,
                     lambda widget: self.show(),
                 ),
-                ("Quit", Gtk.STOCK_QUIT, None, None, None, self.on_quit_activate),
+                ("Quit", None, None, None, None, self.on_quit_activate),
             ]
         )
 
@@ -684,7 +684,7 @@ class MainWindow:
             self.template_button.set_menu(self.template_manager.get_menu())
 
         self.template_button = customwidgets.ToolbarMenuButton(
-            Gtk.STOCK_PASTE, self.template_manager.get_menu()
+            "edit-paste", self.template_manager.get_menu()
         )
         self.template_button.set_label(_("Template"))
         self.template_button.connect("clicked", update_menu)
@@ -934,7 +934,7 @@ class Statusbar:
 
     def show_message(self, title, msg, msg_type):
         if title and msg:
-            text = "{}: {}".format(title, msg)
+            text = f"{title}: {msg}"
         else:
             text = title or msg
         self._show_text(text)

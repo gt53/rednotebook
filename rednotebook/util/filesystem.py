@@ -32,6 +32,8 @@ REMOTE_PROTOCOLS = ["http", "ftp", "irc"]
 IS_WIN = sys.platform.startswith("win")
 IS_MAC = sys.platform == "darwin"
 
+LOCAL_FILE_PEFIX = "file:///" if IS_WIN else "file://"
+
 
 def has_system_tray():
     return IS_WIN  # A smarter detection is needed here ;)
@@ -146,7 +148,7 @@ def write_file(filename, content):
         with codecs.open(filename, "wb", errors="replace", encoding="utf-8") as file:
             file.write(content)
     except OSError as e:
-        logging.error('Error while writing to "{}": {}'.format(filename, e))
+        logging.error(f'Error while writing to "{filename}": {e}')
 
 
 def make_directory(dir):
@@ -233,7 +235,7 @@ def get_platform_info():
         ]
     )
 
-    vals = ["{}: {}".format(name, val) for name, val in names_values]
+    vals = [f"{name}: {val}" for name, val in names_values]
     return "System info: " + ", ".join(vals)
 
 

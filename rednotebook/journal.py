@@ -42,8 +42,24 @@ except ImportError as err:
     )
     sys.exit(1)
 
-gi.require_version("Gtk", "3.0")
-gi.require_version("GtkSource", "3.0")
+try:
+    gi.require_version("Gtk", "3.0")
+except ValueError as err:
+    logging.error(err)
+    sys.exit("Please install GTK (gir1.2-gtk-3.0).")
+
+try:
+    gi.require_version("GtkSource", "4")
+    logging.info("Using GtkSourceView 4")
+except ValueError:
+    try:
+        gi.require_version("GtkSource", "3.0")
+        logging.info("Using GtkSourceView 3.0")
+    except ValueError:
+        sys.exit(
+            "Please install GtkSource (gir1.2-gtksource-3.0 or gir1.2-gtksource-4)."
+        )
+
 
 if hasattr(sys, "frozen"):
     base_dir = sys._MEIPASS
@@ -51,7 +67,7 @@ else:
     app_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.dirname(app_dir)
 
-print("Adding {} to sys.path".format(base_dir))
+print(f"Adding {base_dir} to sys.path")
 sys.path.insert(0, base_dir)
 
 from rednotebook.util import filesystem
@@ -153,14 +169,21 @@ logging.info("System encoding: %s" % filesystem.ENCODING)
 logging.info("Language code: %s" % filesystem.LANGUAGE)
 
 try:
+    import enchant
+
+    logging.info(f"Spell checking languages: {enchant.list_languages()}")
+    logging.info(f"Spell checking dictionaries: {enchant.list_dicts()}")
+except ImportError:
+    pass
+
+try:
     from gi.repository import Gtk
-    from gi.repository import GObject
+    from gi.repository import Gio
+    from gi.repository import GLib
 except (ImportError, AssertionError) as e:
     logging.error(e)
     logging.error("GTK not found. Please install it (gir1.2-gtk-3.0).")
     sys.exit(1)
-
-GObject.threads_init()
 
 
 from rednotebook.util import dates
@@ -172,8 +195,20 @@ from rednotebook import storage
 from rednotebook.data import Month
 
 
-class Journal:
-    def __init__(self):
+class Journal(Gtk.Application):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            application_id="app.rednotebook.RedNotebook",
+            flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
+            **kwargs
+        )
+        # Let components check if the MainWindow has been created.
+        self.frame = None
+
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
+
         self.dirs = dirs
 
         user_config = configuration.Config(self.dirs.config_file)
@@ -203,9 +238,7 @@ class Journal:
 
         self.actual_date = self.get_start_date()
 
-        # Let components check if the MainWindow has been created
-        self.frame = None
-        self.frame = MainWindow(self)
+        self.do_activate()
 
         journal_path = self.get_journal_path()
         if not self.dirs.is_valid_journal_path(journal_path):
@@ -223,14 +256,24 @@ class Journal:
         self.open_journal(journal_path)
 
         self.archiver = backup.Archiver(self)
-        GObject.idle_add(self.archiver.check_last_backup_date)
+        GLib.idle_add(self.archiver.check_last_backup_date)
 
         # Check for a new version
         if self.config.read("checkForNewVersion") == 1:
             utils.check_new_version(self, info.version, startup=True)
 
         # Automatically save the content after a period of time
-        GObject.timeout_add_seconds(600, self.save_to_disk)
+        GLib.timeout_add_seconds(600, self.save_to_disk)
+
+    def do_activate(self):
+        if not self.frame:
+            self.frame = MainWindow(self)
+        self.frame.main_frame.present()
+
+    def do_command_line(self, _command_line):
+        # Arguments are parsed elsewhere, so we only show the window here.
+        self.activate()
+        return 0  # Must return a number.
 
     def get_journal_path(self):
         """
@@ -297,7 +340,7 @@ class Journal:
             # Informs the logging system to perform an orderly shutdown by
             # flushing and closing all handlers.
             logging.shutdown()
-            Gtk.main_quit()
+            self.quit()
 
     def convert(self, text, target, headers=None, options=None, use_gtk_theme=False):
         options = options or {}
@@ -318,7 +361,7 @@ class Journal:
         try:
             filesystem.make_directory(self.dirs.data_dir)
         except OSError as err:
-            logging.error("Creating journal directory failed: {}".format(err))
+            logging.error(f"Creating journal directory failed: {err}")
             self.frame.show_save_error_dialog(exit_imminent)
             return True
 
@@ -327,7 +370,7 @@ class Journal:
                 self.months, self.dirs.data_dir, exit_imminent, saveas
             )
         except OSError as err:
-            logging.error("Saving month files failed: {}".format(err))
+            logging.error(f"Saving month files failed: {err}")
             self.frame.show_save_error_dialog(exit_imminent)
             something_saved = None
 
@@ -500,7 +543,7 @@ class Journal:
             log_level = logging.INFO
 
         self.frame.show_message(title, msg, msg_type)
-        logging.log(log_level, "{}. {}".format(title, msg) if title else msg)
+        logging.log(log_level, f"{title}. {msg}" if title else msg)
 
     @property
     def categories(self):
@@ -595,20 +638,12 @@ class Journal:
 
 
 def main():
-    start_time = time.time()
     journal = Journal()
     utils.setup_signal_handlers(journal)
-    end_time = time.time()
-    logging.debug("Start took %s seconds" % (end_time - start_time))
+    journal.run(sys.argv)
 
     try:
-        logging.debug("Trying to enter the gtk main loop")
-        Gtk.main()
-    except KeyboardInterrupt:
-        pass
-
-    try:
-        logging.info("Peak memory: {} KiB".format(filesystem.get_peak_memory_in_kb()))
+        logging.info(f"Peak memory: {filesystem.get_peak_memory_in_kb()} KiB")
     except Warning:
         pass
 

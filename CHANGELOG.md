@@ -1,3 +1,43 @@
+# 2.27.2 (2022-12-01)
+* Fix passing command line arguments (Jendrik Seipp).
+* Update translation files (Jendrik Seipp).
+
+# 2.27.1 (2022-11-18)
+* Fix application ID for Flatpak (#650, Jendrik Seipp).
+
+# 2.27 (2022-11-16)
+* Upgrade to GTK 3.24 on Windows (Jendrik Seipp).
+* Use external preview on Windows since embedding the preview is impossible with newer GTK versions (Jendrik Seipp).
+* Use GtkApplication class and only allow running one RedNotebook instance at a time (Jendrik Seipp).
+* Add support for GtkSourceView 4 (Jendrik Seipp).
+* Raise minimum Python version to 3.6 (Jendrik Seipp).
+* Add more languages to Windows installer (Jendrik Seipp).
+
+# 2.26 (2022-09-28)
+* Fix issue #632 by skipping obsolete Python function (Jendrik Seipp).
+* Fix: only try to load CEF Python on Windows (Jendrik Seipp).
+* Update Turkish translation (sabriunal).
+
+# 2.25 (2022-05-16)
+* Use icon names instead of GTK stock icons to support newer GTK versions (Jendrik Seipp).
+* Handle several GTK deprecation warnings (Jendrik Seipp).
+
+# 2.24 (2022-02-21)
+* Revert to plain naming scheme for data files since reverse DNS naming causes problems (#611, Phil Wyett).
+
+# 2.23 (2022-02-13)
+* Check that a newly written month file is valid before deleting the old month file.
+* Rename "autostart" file. Please reenable autostart option in preferences if you want RedNotebook to run on system startup.
+* Fix Python crash on program start (#583, Max Krummenacher).
+* Prevent save failures on network and cloud drives (#593, Robert Little).
+* Add script for importing entries (#571, Cary Gravel).
+* Revamp packaging for Debian (#599, #600, Phil Wyett).
+* Fix continuous integration tests.
+
+# 2.22 (2021-04-25)
+* Add a "Give Feedback" button (#551, Rahul Jha).
+* Test code on macOS (#552, Rahul Jha).
+
 # 2.21 (2020-12-07)
 * Update MathJax to version 3 (#515, @dgcampea).
 * Fix date references in CEF-based HtmlView (#544, Paweł Żukowski).

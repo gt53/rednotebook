@@ -62,7 +62,8 @@ MENUBAR_XML = """\
     <menu action="HelpMenu">
         <menuitem action="Help"/>
         <separator/>
-        <menuitem action="OnlineHelp"/>
+        <menuitem action="GiveFeedback"/>
+        <menuitem action="Donate"/>
         <menuitem action="Translate"/>
         <menuitem action="ReportBug"/>
         <separator/>
@@ -70,7 +71,8 @@ MENUBAR_XML = """\
     </menu>
 </menubar>
 </ui>""".format(
-    insert_menu.MENUBAR_XML, format_menu.MENUBAR_XML,
+    insert_menu.MENUBAR_XML,
+    format_menu.MENUBAR_XML,
 )
 
 
@@ -234,19 +236,19 @@ class MainMenuBar:
                     self.on_help_menu_item_activate,
                 ),
                 (
-                    "OnlineHelp",
+                    "Donate",
                     None,
-                    _("Get Help Online"),
+                    _("Donate"),
                     None,
-                    _("Browse answered questions or ask a new one"),
-                    self.on_online_help,
+                    _("Support RedNotebook with a donation"),
+                    self.on_donate,
                 ),
                 (
                     "Translate",
                     None,
                     _("Translate RedNotebook"),
                     None,
-                    _("Connect to the Launchpad website to help translate RedNotebook"),
+                    _("Help translate RedNotebook to your language"),
                     self.on_translate,
                 ),
                 (
@@ -256,6 +258,14 @@ class MainMenuBar:
                     None,
                     _("Fill out a short form about the problem"),
                     self.on_report_bug,
+                ),
+                (
+                    "GiveFeedback",
+                    None,
+                    _("Give Feedback"),
+                    None,
+                    _("How can we improve RedNotebook?"),
+                    self.on_give_feedback,
                 ),
                 ("Info", Gtk.STOCK_ABOUT, None, None, None, self.on_info_activate),
             ]
@@ -400,14 +410,17 @@ class MainMenuBar:
         )
         utils.show_html_in_browser(html, os.path.join(temp_dir, "help.html"))
 
-    def on_online_help(self, widget):
-        webbrowser.open(info.answers_url)
+    def on_donate(self, widget):
+        webbrowser.open(info.donation_url)
 
     def on_translate(self, widget):
         webbrowser.open(info.translation_url)
 
     def on_report_bug(self, widget):
         webbrowser.open(info.bug_url)
+
+    def on_give_feedback(self, widget):
+        webbrowser.open(info.discussion_url)
 
     def on_info_activate(self, widget):
         self.info_dialog = self.main_window.builder.get_object("about_dialog")
